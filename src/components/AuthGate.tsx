@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRole } from './RoleProvider';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3301/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-marketplace-isa0.onrender.com/api';
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, setAuth, loaded, role } = useRole();
@@ -39,35 +39,38 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   };
 
   if (!loaded) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">Cargando...</div>;
   }
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="w-full max-w-md px-4 py-8">
-          <h1 className="text-2xl font-bold mb-4">Bienvenido</h1>
-          <div className="flex gap-2 mb-4">
-            <button onClick={() => setMode('login')} className={`px-4 py-2 rounded ${mode === 'login' ? 'bg-gray-900 text-white' : 'bg-white border'}`}>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-slate-900">Bienvenido</h1>
+            <p className="text-slate-500 mt-2">Iniciá sesión o creá una cuenta</p>
+          </div>
+          <div className="flex gap-2 mb-6 bg-slate-100 p-1 rounded-lg">
+            <button onClick={() => setMode('login')} className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'login' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
               Ingresar
             </button>
-            <button onClick={() => setMode('register')} className={`px-4 py-2 rounded ${mode === 'register' ? 'bg-gray-900 text-white' : 'bg-white border'}`}>
+            <button onClick={() => setMode('register')} className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'register' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
               Registrarse
             </button>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); handleAuth(mode); }} className="space-y-4 bg-white p-6 border rounded">
-            {error && <div className="text-sm text-red-600">{error}</div>}
+          <form onSubmit={(e) => { e.preventDefault(); handleAuth(mode); }} className="space-y-5 bg-white shadow-lg shadow-indigo-100/40 p-8 border border-slate-200 rounded-xl">
+            {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{error}</div>}
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Email</label>
-              <input required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <input required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all placeholder:text-slate-400" />
             </div>
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Contraseña</label>
-              <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
+              <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all placeholder:text-slate-400" />
             </div>
             <div>
-              <button className="w-full bg-gray-900 text-white py-2 rounded">{loading ? 'Cargando...' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}</button>
+              <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white py-2.5 rounded-lg font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed">{loading ? 'Cargando...' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}</button>
             </div>
           </form>
         </div>
@@ -75,6 +78,5 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If token exists, render children normally
   return <>{children}</>;
 }

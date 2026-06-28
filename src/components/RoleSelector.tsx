@@ -13,12 +13,12 @@ export default function RoleSelector() {
   if (!loaded) return null;
 
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-700">
+    <div className="flex items-center gap-2 text-sm text-slate-600">
       <span>Rol:</span>
       <select
         value={role ?? 'customer'}
         onChange={(event) => setRole(event.target.value as UserRole)}
-        className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

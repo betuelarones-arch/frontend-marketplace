@@ -20,7 +20,7 @@ export default function CategoryFilter({
         const url = v ? `/?categoryId=${encodeURIComponent(v)}` : '/';
         router.push(url);
       }}
-      className="px-3 py-2 border rounded-md"
+      className="px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700"
     >
       <option value="">Todas</option>
       {categories.map((c) => (

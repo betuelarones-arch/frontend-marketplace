@@ -14,14 +14,14 @@ export default function RoleGate({ allowed, children }: RoleGateProps) {
   const router = useRouter();
 
   if (!loaded) {
-    return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-600">Cargando rol...</div>;
+    return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-slate-500">Cargando rol...</div>;
   }
 
   if (!role || !allowed.includes(role)) {
     if (typeof window !== 'undefined') {
       router.replace('/');
     }
-    return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-red-600">Acceso no autorizado.</div>;
+    return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-red-500">Acceso no autorizado.</div>;
   }
 
   return <>{children}</>;
