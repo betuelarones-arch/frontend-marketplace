@@ -6,6 +6,16 @@ import { useRole } from '@/components/RoleProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend-marketplace-isa0.onrender.com/api';
 
+interface ProductForm {
+  nombre: string;
+  precio: string;
+  descripcion: string;
+  imageUrl: string;
+  categoryId: string;
+}
+
+const emptyForm: ProductForm = { nombre: '', precio: '', descripcion: '', imageUrl: '', categoryId: '' };
+
 export default function AdminPage() {
   const { token, setAuth, user, role } = useRole();
 
@@ -19,11 +29,26 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [prodLoading, setProdLoading] = useState(false);
 
+  const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+
   useEffect(() => {
     if (role === 'admin') {
       loadAdminData();
     }
   }, [role]);
+
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  });
 
   const loadAdminData = async () => {
     setProdLoading(true);
@@ -40,6 +65,100 @@ export default function AdminPage() {
       console.error(err);
     } finally {
       setProdLoading(false);
+    }
+  };
+
+  const openCreate = () => {
+    setEditingProduct(null);
+    setForm(emptyForm);
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const openEdit = (p: Product) => {
+    setEditingProduct(p);
+    setForm({
+      nombre: p.nombre,
+      precio: String(p.precio),
+      descripcion: p.descripcion || '',
+      imageUrl: p.imageUrl || '',
+      categoryId: p.categoryId ? String(p.categoryId) : '',
+    });
+    setFormError(null);
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setFormError(null);
+    try {
+      const body = {
+        nombre: form.nombre,
+        precio: parseFloat(form.precio),
+        descripcion: form.descripcion || undefined,
+        imageUrl: form.imageUrl || undefined,
+        categoryId: form.categoryId ? parseInt(form.categoryId) : undefined,
+      };
+
+      const isEdit = editingProduct;
+      const url = isEdit ? `${API_URL}/products/${editingProduct.id}` : `${API_URL}/products`;
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        setFormError(json?.message || 'Error al guardar');
+        return;
+      }
+
+      setShowModal(false);
+      loadAdminData();
+    } catch {
+      setFormError('Error de conexión');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Eliminar este producto?')) return;
+    try {
+      const res = await fetch(`${API_URL}/products/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) return;
+      loadAdminData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryName.trim()) return;
+    setSavingCategory(true);
+    try {
+      const res = await fetch(`${API_URL}/categories`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ nombre: categoryName }),
+      });
+      if (res.ok) {
+        setShowCategoryModal(false);
+        setCategoryName('');
+        loadAdminData();
+      }
+    } catch {
+      console.error('Error creating category');
+    } finally {
+      setSavingCategory(false);
     }
   };
 
@@ -110,26 +229,47 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-slate-900 mb-6">Administración de Productos</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-slate-900">Administración</h1>
+        <div className="flex gap-3">
+          <button onClick={() => setShowCategoryModal(true)} className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all text-sm font-medium">
+            + Categoría
+          </button>
+          <button onClick={openCreate} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all text-sm font-medium">
+            + Producto
+          </button>
+        </div>
+      </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-slate-900">Productos</h2>
+      <div className="mb-10">
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Productos</h2>
         {prodLoading ? (
           <div className="text-slate-400">Cargando...</div>
         ) : (
-          <div className="mt-4 bg-white border border-slate-200 rounded-lg overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <table className="w-full">
               <thead className="bg-indigo-50/50 border-b border-slate-200">
                 <tr>
-                  <th className="p-3 text-left text-slate-700 font-semibold">Nombre</th>
-                  <th className="p-3 text-left text-slate-700 font-semibold">Precio</th>
+                  <th className="p-3 text-left text-slate-700 font-semibold text-sm">Nombre</th>
+                  <th className="p-3 text-left text-slate-700 font-semibold text-sm">Precio</th>
+                  <th className="p-3 text-left text-slate-700 font-semibold text-sm">Categoría</th>
+                  <th className="p-3 text-left text-slate-700 font-semibold text-sm">Imagen</th>
+                  <th className="p-3 text-right text-slate-700 font-semibold text-sm">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {products.length === 0 ? (
+                  <tr><td colSpan={5} className="p-6 text-center text-slate-400">No hay productos</td></tr>
+                ) : products.map((p) => (
                   <tr key={p.id} className="border-b border-slate-100 hover:bg-indigo-50/30">
-                    <td className="p-3 text-slate-800">{p.nombre}</td>
-                    <td className="p-3 text-indigo-600 font-semibold">{p.precio}</td>
+                    <td className="p-3 text-slate-800 font-medium">{p.nombre}</td>
+                    <td className="p-3 text-indigo-600 font-semibold">S/ {p.precio}</td>
+                    <td className="p-3 text-slate-600">{p.category?.nombre || <span className="text-slate-300">—</span>}</td>
+                    <td className="p-3 text-slate-600">{p.imageUrl ? <span className="text-xs text-indigo-500">✔</span> : <span className="text-slate-300">—</span>}</td>
+                    <td className="p-3 text-right">
+                      <button onClick={() => openEdit(p)} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-3">Editar</button>
+                      <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-sm font-medium">Eliminar</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -139,15 +279,77 @@ export default function AdminPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-slate-900">Categorías</h2>
-        <div className="mt-4 bg-white border border-slate-200 rounded-lg p-4">
-          <ul>
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Categorías</h2>
+        {categories.length === 0 ? (
+          <div className="text-slate-400">No hay categorías</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
-              <li key={c.id} className="py-1 text-slate-700">{c.nombre}</li>
+              <span key={c.id} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium">
+                {c.nombre}
+              </span>
             ))}
-          </ul>
-        </div>
+          </div>
+        )}
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">{editingProduct ? 'Editar producto' : 'Nuevo producto'}</h3>
+            <form onSubmit={handleSave} className="space-y-4">
+              {formError && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{formError}</div>}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all text-slate-900" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Precio</label>
+                <input required type="number" step="0.01" value={form.precio} onChange={(e) => setForm({ ...form, precio: e.target.value })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all text-slate-900" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                <textarea value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} rows={3} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all text-slate-900 resize-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">URL de imagen</label>
+                <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-900" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
+                <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all text-slate-900 bg-white">
+                  <option value="">Sin categoría</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium">Cancelar</button>
+                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-medium disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Nueva categoría</h3>
+            <form onSubmit={handleCreateCategory} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
+                <input required value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Ej: Electrónicos" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-900" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowCategoryModal(false)} className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-all font-medium">Cancelar</button>
+                <button type="submit" disabled={savingCategory} className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all font-medium disabled:opacity-60">{savingCategory ? 'Guardando...' : 'Crear'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
